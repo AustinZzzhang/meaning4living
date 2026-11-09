@@ -28,6 +28,8 @@ python3 scripts/github-release.py prepare
 
 构建自动嵌入 `https://OWNER.github.io/meaning4living/appcast.xml`。
 `prepare` 使用原有钥匙串中的 Sparkle 私钥签名，不创建新密钥。
+GitHub 发布附件使用 `LivingMeaning-版本号.dmg`，避免服务端改写中文文件名；
+DMG 内的应用仍名为「活着的意义」。离线分享包可以保留中文安装包文件名。
 没有原发布私钥的机器可以构建测试，但不能替既有用户签发可用更新。
 私钥不得上传源码、GitHub Secrets 或聊天。
 

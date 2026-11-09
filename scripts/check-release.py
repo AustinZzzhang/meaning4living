@@ -3,9 +3,13 @@
 
 import importlib.util
 import json
+import plistlib
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 MODULE_PATH = Path(__file__).with_name("github-release.py")
 SPEC = importlib.util.spec_from_file_location("github_release", MODULE_PATH)
@@ -30,7 +34,7 @@ class ReleaseChecks(unittest.TestCase):
             "minimum_macos": "13.0", "architectures": ["arm64", "x86_64"], "notarized": False,
             "source_sha256": "f" * 64,
         }
-        for kind, name in [("dmg", "活着的意义-1.2.1.dmg"), ("zip", "LivingMeaning-1.2.1.zip")]:
+        for kind, name in [("dmg", "LivingMeaning-1.2.1.dmg"), ("zip", "LivingMeaning-1.2.1.zip")]:
             path = self.directory / name
             path.write_bytes(b"synthetic-format-only-fixture")
             self.manifest[kind] = {
@@ -90,6 +94,53 @@ class ReleaseChecks(unittest.TestCase):
         self.manifest["zip"]["name"] = "../LivingMeaning-1.2.1.zip"
         with self.assertRaises(ValueError):
             RELEASE.validate_manifest(self.manifest, self.repository)
+
+    def test_unicode_asset_names_rejected(self):
+        """Reject names GitHub strips during upload; takes no inputs and returns nothing."""
+        for name in ["活着的意义-1.2.1.dmg", "Living Meaning-1.2.1.dmg", ".LivingMeaning-1.2.1.dmg"]:
+            with self.subTest(name=name):
+                self.manifest["dmg"]["name"] = name
+                self.manifest["dmg"]["url"] = RELEASE.asset_url(self.repository, "v1.2.1", name)
+                with self.assertRaises(ValueError):
+                    RELEASE.validate_manifest(self.manifest, self.repository)
+
+    def test_prepare_normalizes_github_asset_names(self):
+        """Exercise prepare with a Chinese local DMG and stubbed external build tools; assert portable output names."""
+        root = Path(self.temporary.name) / "project"
+        resources = root / "Resources"
+        resources.mkdir(parents=True)
+        info = {"CFBundleShortVersionString": "1.2.1", "CFBundleVersion": "6"}
+        (resources / "Info.plist").write_bytes(plistlib.dumps(info))
+        (root / "release-config.json").write_text(json.dumps({"repository": self.repository}))
+        contents = root / "dist/活着的意义.app/Contents"
+        contents.mkdir(parents=True)
+        bundle = {**info, "SUFeedURL": self.manifest["feed_url"]}
+        (contents / "Info.plist").write_bytes(plistlib.dumps(bundle))
+        original_name = "活着的意义-1.2.1.dmg"
+
+        def stub_tools(arguments, **options):
+            """Emulate release.py output and lipo for arguments/options; return successful process output."""
+            arguments = [str(value) for value in arguments]
+            if any(value.endswith("/scripts/release.py") for value in arguments):
+                staging = Path(arguments[arguments.index("--output") + 1])
+                shutil.copytree(self.directory, staging)
+                (staging / self.manifest["dmg"]["name"]).rename(staging / original_name)
+                generated = {
+                    "dmg": original_name, "zip": self.manifest["zip"]["name"],
+                    "sourceSHA256": self.manifest["source_sha256"],
+                }
+                (staging / "latest.json").write_text(json.dumps(generated))
+            output = "arm64 x86_64\n" if arguments[0] == "lipo" else ""
+            return subprocess.CompletedProcess(arguments, 0, stdout=output)
+
+        with mock.patch.object(RELEASE, "ROOT", root), mock.patch.object(RELEASE, "run", side_effect=stub_tools):
+            prepared = RELEASE.prepare()
+        manifest = RELEASE.validate_artifacts(prepared, self.repository)
+        latest = json.loads((prepared / "latest.json").read_text())
+        self.assertEqual(manifest["dmg"]["name"], "LivingMeaning-1.2.1.dmg")
+        self.assertEqual(latest["dmg"], manifest["dmg"]["name"])
+        self.assertEqual((prepared / manifest["dmg"]["name"]).read_bytes(), b"synthetic-format-only-fixture")
+        self.assertEqual((prepared / "appcast.xml").read_bytes(), (self.directory / "appcast.xml").read_bytes())
 
     def test_modified_download(self):
         """Catch a modified archive before deployment; no inputs or return, asserts validation fails."""

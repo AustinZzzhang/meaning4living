@@ -104,8 +104,8 @@ def validate_manifest(manifest, repository):
     for kind in ["dmg", "zip"]:
         item = manifest.get(kind, {})
         name = item.get("name", "")
-        if not name or Path(name).name != name or "/" in name or "\\" in name or not name.endswith("." + kind):
-            raise ValueError("Unsafe release filename.")
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*\." + kind, name):
+            raise ValueError("Use a portable ASCII release filename that GitHub will preserve.")
         if item.get("url") != asset_url(repository, tag, name):
             raise ValueError("Release download URL mismatch.")
         if not re.fullmatch(r"[a-f0-9]{64}", item.get("sha256", "")):
@@ -174,6 +174,16 @@ def prepare():
         run([SPARKLE / "sign_update", "--account", "local.livingmeaning.updates",
              "--verify", staging / "appcast.xml"])
         generated = json.loads((staging / "latest.json").read_text())
+        # GitHub strips Chinese characters from uploaded filenames; keep the app's display name inside the DMG.
+        portable_dmg = f"LivingMeaning-{info['version']}.dmg"
+        original_dmg = staging / generated["dmg"]
+        destination = staging / portable_dmg
+        if original_dmg != destination:
+            if destination.exists():
+                raise ValueError("A conflicting portable DMG filename already exists.")
+            original_dmg.rename(destination)
+        generated["dmg"] = portable_dmg
+        (staging / "latest.json").write_text(json.dumps(generated, ensure_ascii=False, indent=2) + "\n")
         manifest = {
             **info, "repository": repository, "site_url": pages_url(repository), "feed_url": expected_feed,
             "minimum_macos": "13.0", "architectures": ["arm64", "x86_64"], "notarized": False,
