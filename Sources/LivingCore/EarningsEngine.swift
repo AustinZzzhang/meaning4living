@@ -91,6 +91,30 @@ public struct EarningsEngine {
         refreshRecords(at: date, records: &records)
     }
 
+    /// Rebuilds current-day plans using new settings while retaining historical plans; returns nothing.
+    public func reconcileCurrentData(at date: Date, settings: WorkSettings, records: inout [String: DayRecord]) {
+        var currentKeys = Set([workCalendar.key(for: date)])
+        if let active = records.values.compactMap(\.plan).first(where: {
+            date >= $0.shift.day && date < $0.shift.overtimeEnd
+        }) {
+            currentKeys.insert(active.shift.key)
+        }
+        for key in currentKeys {
+            guard var record = records[key],
+                  let previous = record.plan,
+                  let replacement = plan(on: previous.shift.day, settings: settings, records: [:]),
+                  replacement.shift.key == key else { continue }
+            record.plan = replacement
+            let amounts = DailyAmounts.calculate(record: record, asOf: date)
+            record.earnedAmount = amounts.earned
+            record.freeloadAmount = amounts.freeload
+            record.freeloadSeconds = amounts.freeSeconds
+            record.isSettled = record.checkOutAt != nil || date >= replacement.shift.overtimeEnd
+            recalculateLoss(&record)
+            records[key] = record
+        }
+    }
+
     /// Refreshes amounts and settlement for existing records at date; returns nothing and never creates history.
     private func refreshRecords(at date: Date, records: inout [String: DayRecord]) {
         for key in Array(records.keys) {

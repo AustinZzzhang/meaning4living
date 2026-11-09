@@ -74,6 +74,35 @@ check("Exact start awaits check-in with zero earnings") {
     let value = snapshot(date(2026, 11, 3, 9, 30))
     return value.phase == .awaitingCheckIn && value.earned == 0 && value.timerCaption == "距下班 09:00:00"
 }
+check("Late-day 23:00 end remains a twelve-hour shift after clock-in") {
+    var settings = defaults
+    settings.startMinute = 10 * 60 + 50
+    settings.endMinute = 23 * 60
+    var records: [String: DayRecord] = [:]
+    let current = date(2026, 11, 9, 16, 54)
+    guard engine.checkIn(at: date(2026, 11, 9, 16, 46), settings: settings, records: &records) else {
+        return false
+    }
+    let value = engine.snapshot(at: current, settings: settings, records: records)
+    return value.phase == .working
+        && value.shift?.end == date(2026, 11, 9, 23)
+        && value.shift?.duration == 12 * 3600 + 10 * 60
+        && value.timerText == "06:06:00"
+}
+check("Changing an unpunched shift to 23:00 does not retain a stale 11:00 plan") {
+    var oldSettings = defaults
+    oldSettings.startMinute = 10 * 60 + 50
+    oldSettings.endMinute = 11 * 60
+    var newSettings = oldSettings
+    newSettings.endMinute = 23 * 60
+    var records: [String: DayRecord] = [:]
+    let current = date(2026, 11, 9, 16, 54)
+    engine.observe(at: current, settings: oldSettings, records: &records)
+    engine.reconcileCurrentData(at: current, settings: newSettings, records: &records)
+    guard engine.checkIn(at: current, settings: newSettings, records: &records) else { return false }
+    let value = engine.snapshot(at: current, settings: newSettings, records: records)
+    return value.phase == .working && value.shift?.end == date(2026, 11, 9, 23)
+}
 check("Mid-shift earnings are elapsed seconds times rate") {
     let value = snapshot(date(2026, 11, 3, 12, 30))
     return near(value.amount, 18000 / 21 / 3) && near(value.progress, 1 / 3)
@@ -180,14 +209,16 @@ check("Rest days never accumulate overtime while the app stays open") {
     )
     return records.isEmpty
 }
-check("Salary changes keep the recorded day's frozen rate for all of its losses") {
+check("Salary changes update current day's recorded rate and loss") {
     var records: [String: DayRecord] = [:]
     var session = ActiveSession(startingAt: date(2026, 11, 3, 19), uptime: 0)
     session.advance(to: date(2026, 11, 3, 19, 1), uptime: 60, engine: engine, settings: defaults, records: &records)
     let first = records["2026-11-03"]!.overtimeLoss
     var higher = defaults
     higher.monthlySalary *= 2
-    session.advance(to: date(2026, 11, 3, 19, 2), uptime: 120, engine: engine, settings: higher, records: &records)
+    engine.reconcileCurrentData(
+        at: date(2026, 11, 3, 19, 1), settings: higher, records: &records
+    )
     return near(records["2026-11-03"]!.overtimeLoss, first * 2)
 }
 check("Month-boundary accrual uses the corresponding month's rate") {
@@ -609,17 +640,46 @@ check("Opening on a later day refreshes observed history but never creates missi
         && records["2026-11-03"]!.isSettled && near(records["2026-11-03"]!.earnedAmount, 900)
         && records.values.allSatisfy { $0.overtimeLoss == 0 }
 }
-check("Existing plan stays fixed when salary, hours and the day's calendar are edited") {
+check("Current day's plan updates when salary and hours are edited") {
     var records: [String: DayRecord] = [:]
     engine.checkIn(at: date(2026, 11, 3, 9), settings: attendance, records: &records)
     var edited = attendance
     edited.monthlySalary *= 2
     edited.startMinute = 10 * 60
-    edited.dateOverrides["2026-11-03"] = false
-    let current = snapshot(date(2026, 11, 3, 10), settings: edited, records: records)
-    return near(current.rate, 100 / 3600) && near(current.earned, 100)
-        && current.phase == .working && current.shift?.start == date(2026, 11, 3, 9)
-        && engine.plan(on: date(2026, 11, 4), settings: edited, records: records)!.rate > current.rate
+    let currentDate = date(2026, 11, 3, 10)
+    engine.reconcileCurrentData(at: currentDate, settings: edited, records: &records)
+    let current = snapshot(currentDate, settings: edited, records: records)
+    return near(current.rate, 225 / 3600) && near(current.earned, 0)
+        && current.phase == .working && current.shift?.start == currentDate
+        && current.timerText == "08:00:00"
+        && near(engine.plan(on: date(2026, 11, 4), settings: edited, records: records)!.rate, current.rate)
+}
+check("Historical plans remain frozen when current settings change") {
+    var records: [String: DayRecord] = [:]
+    engine.checkIn(at: date(2026, 11, 3, 9), settings: attendance, records: &records)
+    let historical = records["2026-11-03"]!.plan!
+    var edited = attendance
+    edited.monthlySalary *= 2
+    edited.startMinute = 10 * 60
+    edited.endMinute = 23 * 60
+    engine.reconcileCurrentData(at: date(2026, 11, 9, 10), settings: edited, records: &records)
+    let preserved = records["2026-11-03"]!.plan!
+    return preserved == historical && near(preserved.rate, historical.rate)
+}
+check("Launching with a stale current plan repairs it from saved settings") {
+    var saved = attendance
+    saved.startMinute = 10 * 60 + 50
+    saved.endMinute = 23 * 60
+    var staleSettings = saved
+    staleSettings.endMinute = 11 * 60
+    var records: [String: DayRecord] = [:]
+    engine.checkIn(at: date(2026, 11, 9, 16, 46), settings: staleSettings, records: &records)
+    let now = date(2026, 11, 9, 16, 54)
+    records["2026-11-09"]!.isSettled = true
+    engine.reconcileCurrentData(at: now, settings: saved, records: &records)
+    let value = snapshot(now, settings: saved, records: records)
+    return value.phase == .working && value.shift?.end == date(2026, 11, 9, 23)
+        && value.timerText == "06:06:00" && value.overtimeLoss == 0
 }
 check("An active shift preserves absolute dates and rate through a timezone change") {
     var records: [String: DayRecord] = [:]

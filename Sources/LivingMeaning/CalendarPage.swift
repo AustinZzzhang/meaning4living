@@ -105,7 +105,7 @@ struct CalendarPage: View {
                     : "\(String(year)) 年节假日安排待更新，暂按每周设置。")
                  : "当前使用自定义每周作息，未启用中国大陆节假日。")
                 .font(.system(size: 11)).foregroundStyle(Palette.muted)
-            Text("日历使用系统时区，不读取个人日程。已有班次保存当时的时区、排班和费率。")
+            Text("日历使用系统时区，不读取个人日程。当前日期随设置重算，历史班次保存当时的时区、排班和费率。")
                 .font(.system(size: 11))
                 .foregroundStyle(Palette.muted)
         }

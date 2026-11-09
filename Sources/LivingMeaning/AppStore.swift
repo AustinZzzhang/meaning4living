@@ -70,6 +70,9 @@ final class AppStore: ObservableObject {
         if !testMode, !persistenceBlocked, state.hasConfirmedSchedule {
             EarningsEngine().observe(at: date, settings: state.settings, records: &records)
         }
+        if !testMode, !persistenceBlocked, state.hasConfirmedSchedule {
+            EarningsEngine().reconcileCurrentData(at: date, settings: state.settings, records: &records)
+        }
         self.records = records
         self.snapshot = EarningsEngine().snapshot(at: date, settings: state.settings, records: records)
         self.storageError = errorMessage
@@ -117,11 +120,12 @@ final class AppStore: ObservableObject {
     func updateSettings(_ value: WorkSettings, confirmSchedule: Bool = false) -> String? {
         if let error = value.validationMessage { return error }
         let date = isPreview ? snapshot.date : Date()
-        tick(at: date)
         let previous = settings
         let previousRecords = records
         let previousConfirmed = hasConfirmedSchedule
+        tick(at: date)
         settings = value
+        engine.reconcileCurrentData(at: date, settings: value, records: &records)
         if confirmSchedule { hasConfirmedSchedule = true }
         if !previousConfirmed && hasConfirmedSchedule {
             engine.observe(at: date, settings: value, records: &records)

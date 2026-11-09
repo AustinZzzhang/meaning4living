@@ -146,7 +146,7 @@ struct SettingsPage: View {
                             .foregroundStyle(Palette.green)
                     }
                     Text("整个班次计薪，暂不扣午休。白嫖包含在赚取内；下班打卡停止亏损。"
-                        + "已开始记录的班次保留当时排班与费率，设置修改用于之后未开始记录的班次。")
+                        + "保存工资或作息后，当前日期会立即重算；已经过去的日期保留原记录。")
                         .font(.system(size: 12))
                         .foregroundStyle(Palette.muted)
                         .fixedSize(horizontal: false, vertical: true)

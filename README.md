@@ -85,7 +85,8 @@ clock in at 09:30 and out at 17:00 → **¥900 earned**, **¥150 of that outside
 | You close the window | The app keeps running in the menu bar. |
 | You quit the app | No loss is charged while it is closed; quitting does not clock you out. |
 
-Existing shifts retain their schedule, rate, and time zone so changing settings does not rewrite history.
+The current day's shift recalculates immediately when you save a new salary, schedule, or workday setting.
+Past dates retain their recorded schedule, rate, and time zone so history remains stable.
 Overnight shifts are supported. Personal day overrides take priority over the built-in holiday calendar,
 which takes priority over the weekly schedule.
 

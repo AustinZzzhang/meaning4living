@@ -1,6 +1,6 @@
 # 发布验证记录
 
-本文件记录 1.2.1 / build 6 首次独立发布的准备与验收方式。
+本文件记录 1.2.1 / build 6 首次独立发布，以及 1.2.2 / build 7 当前班次修复。
 实时发布状态以 GitHub Releases 和 Actions 为准，线上验收报告保存在本机发布目录。
 
 ## 发布位置
@@ -14,7 +14,7 @@
 
 ## 本地检查
 
-- 原生业务规则：83 项通过。
+- 原生业务规则：87 项通过。
 - 发布结构与信任边界：17 项通过，包括 GitHub 附件文件名规范化回归检查。
 - 原生界面、持久化与隐私：43 项通过，包括官方更新源默认值和用户覆盖行为。
 - arm64 / x86_64 通用构建及源码指纹核对通过。
@@ -37,7 +37,7 @@ python3 scripts/github-release.py verify-online
 该命令从公开网址下载清单、DMG、ZIP，核对哈希和 Sparkle 签名，输出：
 
 ```text
-dist/github/v1.2.1/online-verification.json
+  dist/github/v1.2.1/online-verification.json
 ```
 
 本机日志与截图保留在 `.build` 和 `dist`，不纳入 Git。
