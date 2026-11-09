@@ -1,0 +1,16 @@
+.build/
+dist/
+.DS_Store
+output/
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.p8
+*.key
+*.mobileprovision
+__pycache__/
+node_modules/
+.venv/
+.local/

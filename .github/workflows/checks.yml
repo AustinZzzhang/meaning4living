@@ -1,0 +1,22 @@
+name: Source checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check earnings, calendar and persistence
+        run: bash scripts/check.sh
+      - name: Check release validation and static website
+        run: python3 scripts/check-release.py
+      - name: Build both Mac architectures without release private keys
+        run: bash scripts/build.sh --universal

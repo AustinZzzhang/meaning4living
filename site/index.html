@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#faf8f3" />
+    <meta
+      name="description"
+      content="活着的意义，一款陪你准时下班的 Mac 小应用。每秒收入、上下班打卡、法定节假日和演示隐私。"
+    />
+    <title>活着的意义 — 认真工作，也准时生活。</title>
+    <link rel="icon" href="./assets/app-icon.png" type="image/png" />
+    <link rel="stylesheet" href="./style.css" />
+    <script src="./release-config.js" defer></script>
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <header class="header wrap">
+      <a class="brand" href="./" aria-label="活着的意义首页">
+        <img src="./assets/app-icon.png" alt="" width="40" height="40" />
+        <span>活着的意义</span>
+      </a>
+      <nav aria-label="主导航">
+        <a href="#features">功能</a>
+        <a href="#install">安装</a>
+        <a href="#questions">常见问题</a>
+        <a class="nav-download" href="#download">下载 Mac 版 <span aria-hidden="true">↗</span></a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero wrap" id="download" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="live-dot"></span> 一个小小的 Mac 下班搭子</div>
+          <h1 id="hero-title">认真工作，<br />也<span class="underline">准时生活。</span></h1>
+          <p class="lead">让每一秒的努力，看得见。<br />把月薪换成实时收入，把下班还给自己。</p>
+          <div class="download-actions">
+            <a class="button primary" id="download-button" aria-disabled="true" tabindex="-1">
+              <span aria-hidden="true">↓</span> <span id="download-label">即将开放下载</span>
+            </a>
+            <a class="text-link" href="#how-it-works">先看看怎么用 <span aria-hidden="true">↗</span></a>
+          </div>
+          <p class="release-meta" id="release-meta">macOS 13+ · Apple Silicon 与 Intel · 发布准备中</p>
+          <p class="install-note">当前为未经过 Apple 公证的试用版。<a href="#install">首次安装说明 ↗</a></p>
+        </div>
+
+        <div class="hero-visual" aria-label="应用状态演示，使用示例数据">
+          <div class="orbit orbit-one"></div>
+          <div class="orbit orbit-two"></div>
+          <div class="visual-note">你负责生活，<br />我来数秒。</div>
+          <img class="dog-icon" src="./assets/app-icon.png" alt="伯恩山犬应用图标" width="220" height="220" />
+          <div class="floating-card">
+            <div class="card-heading">
+              <span id="demo-heading">今日已赚取</span><span class="pill" id="demo-pill">工作中</span>
+            </div>
+            <div class="demo-amount" id="demo-amount">¥637.14</div>
+            <div class="demo-track"><span id="demo-progress"></span></div>
+            <div class="demo-bottom">
+              <span id="demo-state">每一秒，都算数。</span><strong id="demo-timer">距下班 02:18:36</strong>
+            </div>
+          </div>
+          <div class="menu-preview">
+            <span class="live-dot" id="menu-dot"></span><span id="menu-label">¥637.14 · 02:18:36</span>
+          </div>
+          <p class="demo-caption">菜单栏抬头可见 · 以下切换为交互演示</p>
+          <div class="demo-switch" role="group" aria-label="切换状态示例">
+            <button data-phase="working" aria-pressed="true">工作中</button>
+            <button data-phase="awaiting" aria-pressed="false">未打卡</button>
+            <button data-phase="overtime" aria-pressed="false">已超时</button>
+            <button data-phase="settled" aria-pressed="false">已下班</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="belief wrap">
+        <span>不催你更努力。</span><strong>只是提醒你，时间也属于自己。</strong>
+        <span class="small-star" aria-hidden="true">✳</span>
+      </div>
+
+      <section class="wrap section" id="features" aria-labelledby="features-title">
+        <div class="section-top">
+          <div>
+            <p class="eyebrow">小而刚好</p>
+            <h2 id="features-title">少一点复杂，多一点清楚。</h2>
+          </div>
+          <p class="section-aside">留在菜单栏里。<br />用得到时，就在那里。</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card green-card">
+            <span class="feature-symbol" aria-hidden="true">↗</span>
+            <h3>每一秒，正在入账</h3>
+            <p>月薪按实际工作日换算。收入与下班倒计时，在菜单栏里实时可见。</p>
+            <div class="mini-status">
+              <span class="live-dot"></span> ¥637.14 <span class="mini-divider">|</span> 距下班 02:18:36
+            </div>
+          </article>
+          <article class="feature-card">
+            <span class="feature-symbol purple" aria-hidden="true">✓</span>
+            <h3>打个卡，给今天收尾</h3>
+            <p>打卡前的收入归入“白嫖”，打卡后继续累计。下班打卡，停止新增超时亏损。</p>
+            <div class="mini-status purple-text">当日赚取 ¥900 <span class="mini-divider">·</span> 其中白嫖 ¥150</div>
+          </article>
+          <article class="feature-card">
+            <span class="feature-symbol" aria-hidden="true">◷</span>
+            <h3>假期和补班，都记得</h3>
+            <p>内置 2025–2027 年中国大陆放假调休安排。也可以按自己的作息调整某一天。</p>
+            <div class="calendar-mini" aria-label="国庆日历示例">
+              <span>1<small>休</small></span
+              ><span>2<small>休</small></span
+              ><span>3<small>休</small></span>
+              <span class="makeup">10<small>班</small></span>
+            </div>
+          </article>
+          <article class="feature-card cream-card">
+            <span class="feature-symbol" aria-hidden="true">☕</span>
+            <h3>工资，也能是一杯奶茶</h3>
+            <p>敏感模式用物品代替金额。衣服首饰、数码电子、零食美食，或自定义自己的小目标。</p>
+            <div class="mini-status">今天已赚到 <strong>一顿火锅</strong></div>
+          </article>
+          <article class="feature-card">
+            <span class="feature-symbol" aria-hidden="true">⌘</span>
+            <h3>开始分享，收起数字</h3>
+            <p>系统屏幕镜像时自动隐藏，可选外接屏隐藏。会议共享前也能手动开启演示隐私。</p>
+            <div class="shortcut"><kbd>⌃</kbd><kbd>⌥</kbd><kbd>⌘</kbd><kbd>P</kbd><span>一键隐藏</span></div>
+          </article>
+          <article class="feature-card">
+            <span class="feature-symbol" aria-hidden="true">⌂</span>
+            <h3>你的记录，留在本机</h3>
+            <p>无需注册账号，不上传薪资。设置可以用密码保护，密码校验记录保存在 Mac 钥匙串。</p>
+            <div class="mini-status muted-status">本地保存 <span class="mini-divider">·</span> 轻量使用</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="wrap section showcase" id="how-it-works" aria-labelledby="showcase-title">
+        <div class="section-top">
+          <div>
+            <p class="eyebrow">今天，就到这里</p>
+            <h2 id="showcase-title">赚了多少，白嫖多少，一目了然。</h2>
+          </div>
+        </div>
+        <div class="screenshot-frame">
+          <div class="window-bar">
+            <span></span><span></span><span></span>
+            <p>活着的意义 · 当日结算</p>
+          </div>
+          <img
+            src="./assets/dashboard.png"
+            alt="应用结算界面：赚取 900 元、其中白嫖 150 元、亏损 0 元的演示记录"
+            width="1400"
+            height="1090"
+            loading="lazy"
+          />
+        </div>
+        <p class="image-caption">界面中的金额为演示数据。白嫖已包含在当日赚取中，不重复相加。</p>
+      </section>
+
+      <section class="wrap section" id="install" aria-labelledby="install-title">
+        <div class="section-top">
+          <div>
+            <p class="eyebrow">开始很简单</p>
+            <h2 id="install-title">三步，开始数自己的秒。</h2>
+          </div>
+        </div>
+        <ol class="steps">
+          <li>
+            <span class="step-number">01</span>
+            <h3>下载，拖进应用程序</h3>
+            <p>打开 DMG，把“活着的意义”拖到 Applications，再从应用程序启动。</p>
+          </li>
+          <li>
+            <span class="step-number">02</span>
+            <h3>填上自己的薪资作息</h3>
+            <p>确认月薪、上下班时间与工作日，保存后开始记录。工资只保存在你的 Mac。</p>
+          </li>
+          <li>
+            <span class="step-number">03</span>
+            <h3>上班打卡，下班收工</h3>
+            <p>在首页或菜单栏详情中打卡。之后也可在应用“更新”页直接检查和安装新版。</p>
+          </li>
+        </ol>
+        <div class="notice">
+          <span aria-hidden="true">ⓘ</span>
+          <p>
+            <strong>首次打开提示无法验证开发者？</strong> 当前版本未做 Apple 公证。
+            确认来自本官网后，尝试打开应用，再到“系统设置 → 隐私与安全性”查看“仍要打开”。 无需关闭系统安全保护。
+          </p>
+        </div>
+      </section>
+
+      <section class="wrap section faq-section" id="questions" aria-labelledby="faq-title">
+        <div>
+          <p class="eyebrow">你可能想知道</p>
+          <h2 id="faq-title">几个小问题。</h2>
+        </div>
+        <div class="faq-list">
+          <details>
+            <summary>没有 Touch Bar 的 Mac 也能用吗？<span>+</span></summary>
+            <p>
+              可以。主窗口和菜单栏支持所有符合系统要求的 Mac。配备 Touch Bar 时，应用在前台可显示对应信息；
+              切换到其他应用后，Touch Bar 会跟随系统切换。
+            </p>
+          </details>
+          <details>
+            <summary>下班后一直开着，会怎样？<span>+</span></summary>
+            <p>
+              没有下班打卡时，会按每秒薪资累计独立的超时亏损。下班打卡后停止新增亏损。
+              退出期间不会补扣；退出不等于打卡，重开后仍可能继续计时。睡眠期间若应用未退出，计时继续。
+            </p>
+          </details>
+          <details>
+            <summary>提前下班，“白嫖”怎么算？<span>+</span></summary>
+            <p>
+              确认提前下班后，剩余计划工作时间会一次性计入当日收入，并归为白嫖。
+              上班前未打卡的计划时段也属于白嫖。白嫖是总收入的子集，不重复相加。
+            </p>
+          </details>
+          <details>
+            <summary>会议共享时会自动隐藏吗？<span>+</span></summary>
+            <p>
+              系统镜像可以触发自动隐藏，也可选择连接外接显示器时隐藏。会议软件和录屏方式不一定能被识别， 共享前建议按
+              ⌃⌥⌘P 手动隐藏。隐藏期间后台计时继续。
+            </p>
+          </details>
+          <details>
+            <summary>以后如何更新？会丢记录吗？<span>+</span></summary>
+            <p>
+              从本官网安装的发布版本内置更新源，在应用“更新”页检查即可。更新清单和安装包会验证发布签名，
+              确认后才安装，并保留本机设置和记录。旧试用版可先手动安装一次官网版本。
+            </p>
+          </details>
+        </div>
+      </section>
+
+      <section class="wrap closing">
+        <img src="./assets/app-icon.png" alt="" width="64" height="64" loading="lazy" />
+        <div>
+          <h2>每一秒，都算数。</h2>
+          <p>也别忘了，把时间留给喜欢的生活。</p>
+        </div>
+        <a class="button secondary" href="#download">带它回 Mac <span aria-hidden="true">↑</span></a>
+      </section>
+    </main>
+
+    <footer class="wrap footer">
+      <span>活着的意义 · 认真工作，也准时生活。</span>
+      <div>
+        <a id="source-link" hidden>GitHub 源码 ↗</a><a id="release-link" hidden>版本记录 ↗</a>
+        <button id="checksum-button" hidden>校验下载文件</button>
+      </div>
+    </footer>
+    <dialog id="checksum-dialog">
+      <form method="dialog"><button class="close-dialog" aria-label="关闭">×</button></form>
+      <h2>下载文件校验</h2>
+      <p>将下载文件的 SHA-256 与下方数值核对：</p>
+      <code id="checksum-value"></code>
+      <p class="dialog-note" id="checksum-name"></p>
+    </dialog>
+    <noscript><p class="noscript">请启用 JavaScript 查看当前版本与下载入口。</p></noscript>
+  </body>
+</html>

@@ -1,0 +1,86 @@
+name: Publish official website
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+  push:
+    branches: [main]
+    paths:
+      - site/**
+      - .github/workflows/pages.yml
+      - scripts/github-release.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: official-website
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.release.outputs.tag }}
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - name: Check out website source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Read latest stable release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Skip the initial source push until an official stable release exists.
+          available="$(gh release list --exclude-drafts --exclude-pre-releases --limit 1 \
+            --json tagName --jq '.[0].tagName // ""')"
+          if [[ -z "$available" ]]; then
+            echo "No published release yet; website deployment will start after release." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          tag="$(gh release view --json tagName --jq .tagName)"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - name: Download published artifacts
+        if: steps.release.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          gh release download "$RELEASE_TAG" --dir .build/release \
+            --pattern '*.dmg' --pattern '*.zip' --pattern 'release.json' --pattern 'appcast.xml'
+      - name: Validate release and preserve signed feed bytes
+        if: steps.release.outputs.tag != ''
+        env:
+          RELEASE_REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 scripts/github-release.py assemble-site \
+            --repository "$RELEASE_REPOSITORY" --artifacts .build/release --output .build/website
+      - name: Configure Pages
+        if: steps.release.outputs.tag != ''
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - name: Upload static website
+        if: steps.release.outputs.tag != ''
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: .build/website
+  deploy:
+    needs: build
+    if: needs.build.outputs.release_tag != ''
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy website and signed update feed
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
