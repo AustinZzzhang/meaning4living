@@ -41,8 +41,8 @@ def main():
     with (app / "Contents/Info.plist").open("rb") as handle:
         info = plistlib.load(handle)
     version = info["CFBundleShortVersionString"]
-    if not re.fullmatch(r"[0-9]+(?:\.[0-9]+){1,3}", version):
-        raise ValueError("Invalid release version")
+    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
+        raise ValueError("Release version must use major.minor.patch format")
     run(["codesign", "--verify", "--deep", "--strict", app])
     output = (args.output or root / "dist/releases").resolve()
     output.mkdir(parents=True, exist_ok=True)

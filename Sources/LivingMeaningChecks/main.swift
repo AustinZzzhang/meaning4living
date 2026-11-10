@@ -362,7 +362,7 @@ check("Unsupported storage versions are rejected") {
     defer { try? FileManager.default.removeItem(at: url) }
     var state = SavedState()
     state.version = 999
-    try StateRepository(url: url).save(state)
+    try JSONEncoder().encode(state).write(to: url)
     do {
         _ = try StateRepository(url: url).load()
         return false
@@ -375,7 +375,7 @@ check("Malformed persisted settings are rejected") {
     defer { try? FileManager.default.removeItem(at: url) }
     var state = SavedState()
     state.settings.monthlySalary = -1
-    try StateRepository(url: url).save(state)
+    try JSONEncoder().encode(state).write(to: url)
     do {
         _ = try StateRepository(url: url).load()
         return false
@@ -776,22 +776,139 @@ check("New attendance state roundtrips with the frozen plan, runtime evidence an
     try repository.save(state)
     return try repository.load() == state
 }
+check("Extending today's shift after overtime remains readable after next-day restart") {
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: url) }
+    let repository = StateRepository(url: url)
+    var state = SavedState()
+    state.hasConfirmedSchedule = true
+    state.settings.startMinute = 10 * 60 + 50
+    state.settings.endMinute = 11 * 60
+    let start = date(2026, 11, 9, 16, 46)
+    let editedAt = date(2026, 11, 9, 16, 54)
+    engine.checkIn(at: start, settings: state.settings, records: &state.records)
+    engine.accrue(from: start, to: editedAt, settings: state.settings, records: &state.records)
+    state.settings.endMinute = 23 * 60
+    engine.reconcileCurrentData(at: editedAt, settings: state.settings, records: &state.records)
+    guard state.records["2026-11-09"]!.overtimeLoss == 0 else { return false }
+    try repository.save(state)
+    var reloaded = try repository.load()
+    engine.observe(at: date(2026, 11, 10, 12), settings: reloaded.settings, records: &reloaded.records)
+    return reloaded.records["2026-11-09"]?.checkInAt == start
+        && reloaded.records["2026-11-09"]?.overtimeLoss == 0
+}
+check("Previously saved rescheduled overtime loads intact and can be charged again after another edit") {
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: url) }
+    var state = SavedState()
+    state.settings = attendance
+    let editedAt = date(2026, 11, 9, 19)
+    engine.accrue(from: date(2026, 11, 9, 18), to: editedAt,
+                  settings: state.settings, records: &state.records)
+    let evidence = state.records["2026-11-09"]!.overtimeIntervals
+    state.settings.endMinute = 23 * 60
+    engine.reconcileCurrentData(at: editedAt, settings: state.settings, records: &state.records)
+    // Reproduce a file already written by 1.2.2 without invoking the fixed writer.
+    let original = try JSONEncoder().encode(state)
+    try original.write(to: url)
+    var loaded = try StateRepository(url: url).load()
+    guard loaded == state, try Data(contentsOf: url) == original else { return false }
+    loaded.settings = attendance
+    engine.reconcileCurrentData(at: editedAt, settings: loaded.settings, records: &loaded.records)
+    return loaded.records["2026-11-09"]!.overtimeIntervals == evidence
+        && near(loaded.records["2026-11-09"]!.overtimeLoss, 100)
+}
+check("Moving start after an actual checkout preserves punches and their audit through reload") {
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: url) }
+    var state = SavedState()
+    state.settings = attendance
+    let dayKey = "2026-11-09"
+    engine.checkIn(at: date(2026, 11, 9, 9), settings: state.settings, records: &state.records)
+    engine.checkOut(at: date(2026, 11, 9, 9, 15), settings: state.settings, records: &state.records)
+    let correction = engine.correct(
+        key: dayKey, checkIn: date(2026, 11, 9, 9), checkOut: date(2026, 11, 9, 9, 30),
+        now: date(2026, 11, 9, 10), records: &state.records
+    )
+    guard correction == nil else { return false }
+    let audit = state.records[dayKey]!.manualChanges
+    state.settings.startMinute = 10 * 60
+    engine.reconcileCurrentData(at: date(2026, 11, 9, 10), settings: state.settings, records: &state.records)
+    let repository = StateRepository(url: url)
+    try repository.save(state)
+    let loaded = try repository.load()
+    return loaded == state && loaded.records[dayKey]!.manualChanges == audit
+        && loaded.records[dayKey]!.checkOutAt == date(2026, 11, 9, 9, 30)
+}
+check("Changing overnight hours to daytime keeps next-day runtime evidence readable") {
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: url) }
+    var state = SavedState()
+    state.settings = attendance
+    state.settings.startMinute = 22 * 60
+    state.settings.endMinute = 6 * 60
+    let now = date(2026, 11, 10, 7)
+    engine.accrue(from: date(2026, 11, 10, 6), to: now, settings: state.settings, records: &state.records)
+    let evidence = state.records["2026-11-09"]!.overtimeIntervals
+    state.settings = attendance
+    engine.reconcileCurrentData(at: now, settings: state.settings, records: &state.records)
+    let repository = StateRepository(url: url)
+    try repository.save(state)
+    let loaded = try repository.load()
+    return loaded == state && loaded.records["2026-11-09"]!.overtimeIntervals == evidence
+        && loaded.records["2026-11-09"]!.overtimeLoss == 0
+}
+check("Rejected saves preserve the last readable file instead of writing invalid records") {
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: url) }
+    let repository = StateRepository(url: url)
+    var state = SavedState()
+    engine.observe(at: date(2026, 11, 9, 12), settings: state.settings, records: &state.records)
+    try repository.save(state)
+    let original = try Data(contentsOf: url)
+    state.records["2026-11-09"]!.overtimeSeconds = -1
+    do {
+        try repository.save(state)
+        return false
+    } catch StateError.invalidRecord {
+        return try Data(contentsOf: url) == original && repository.load().records["2026-11-09"] != nil
+    }
+}
 check("Corrupt stored amounts, intervals and punches are rejected without overwriting their file") {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     defer { try? FileManager.default.removeItem(at: url) }
     var state = SavedState()
     engine.observe(at: date(2026, 11, 3, 10), settings: attendance, records: &state.records)
     let original = state.records["2026-11-03"]!
-    for index in 0..<4 {
+    for index in 0..<8 {
         var record = original
         switch index {
         case 0: record.freeloadAmount = record.earnedAmount + 1
         case 1: record.legacyLoss = -1
-        case 2: record.checkOutAt = date(2026, 11, 3, 8)
-        default: record.overtimeIntervals = [OvertimeInterval(start: date(), end: date(2026, 11, 3, 1))]
+        case 2: record.checkOutAt = date(2026, 11, 2, 23)
+        case 3:
+            record.overtimeIntervals = [
+                OvertimeInterval(start: date(2026, 11, 3, 19), end: date(2026, 11, 3, 18))
+            ]
+        case 4:
+            record.overtimeIntervals = [
+                OvertimeInterval(start: date(2026, 11, 2, 23), end: date(2026, 11, 3, 19))
+            ]
+        case 5:
+            record.overtimeIntervals = [
+                OvertimeInterval(start: date(2026, 11, 3, 19), end: date(2026, 11, 5, 1))
+            ]
+        case 6:
+            record.checkInAt = date(2026, 11, 3, 12)
+            record.checkOutAt = date(2026, 11, 3, 11)
+        default:
+            record.manualChanges = [
+                AttendanceChange(changedAt: date(2026, 11, 3, 20), oldCheckIn: date(2026, 11, 2, 23),
+                                 oldCheckOut: nil, newCheckIn: nil, newCheckOut: nil)
+            ]
         }
         state.records["2026-11-03"] = record
-        try StateRepository(url: url).save(state)
+        try JSONEncoder().encode(state).write(to: url)
         let bytes = try Data(contentsOf: url)
         do {
             _ = try StateRepository(url: url).load()

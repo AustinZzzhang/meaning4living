@@ -77,7 +77,7 @@ final class AppStore: ObservableObject {
         self.snapshot = EarningsEngine().snapshot(at: date, settings: state.settings, records: records)
         self.storageError = errorMessage
         if !hasConfirmedSchedule { selectedPage = .settings }
-        if !isPreview {
+        if !isPreview, !persistenceBlocked {
             startClock()
             _ = persist()
         }
@@ -91,8 +91,9 @@ final class AppStore: ObservableObject {
         }
     }
 
-    /// Advances the live session to date, updates visible values and periodically persists; returns nothing.
+    /// Advances the session to date unless loading failed, then updates values and persists; returns nothing.
     func tick(at date: Date = Date()) {
+        guard !persistenceBlocked else { return }
         let uptime = Self.continuousSeconds()
         let previousKey = snapshot.dayKey
         if !isPreview, hasConfirmedSchedule {
@@ -118,6 +119,7 @@ final class AppStore: ObservableObject {
     /// Applies value; confirmSchedule starts first-run accounting. Returns validation/storage error, or nil.
     @discardableResult
     func updateSettings(_ value: WorkSettings, confirmSchedule: Bool = false) -> String? {
+        if persistenceBlocked { return persist() }
         if let error = value.validationMessage { return error }
         let date = isPreview ? snapshot.date : Date()
         let previous = settings
@@ -151,6 +153,7 @@ final class AppStore: ObservableObject {
     /// Saves an arrival or departure selected by arriving at optional date; returns a storage or validation error.
     @discardableResult
     func punch(arriving: Bool, at date: Date? = nil) -> String? {
+        if persistenceBlocked { return persist() }
         guard hasConfirmedSchedule else {
             actionMessage = "请先保存薪资与作息，再开始记录。"
             selectedPage = .settings
@@ -178,8 +181,9 @@ final class AppStore: ObservableObject {
         return nil
     }
 
-    /// Saves corrected punches for key using frozen plan; returns an error and rolls back if persistence fails.
+    /// Saves checkIn/checkOut for key using its plan; returns an error and rolls back if persistence fails.
     func correctAttendance(key: String, checkIn: Date?, checkOut: Date?) -> String? {
+        if persistenceBlocked { return persist() }
         let now = isPreview ? snapshot.date : Date()
         tick(at: now)
         let previous = records
@@ -202,9 +206,11 @@ final class AppStore: ObservableObject {
         updateSettings(next)
     }
 
-    /// Flushes active time before quitting; no parameters, returns a storage error or nil.
+    /// Flushes before quit/update, or leaves an unreadable file untouched; no inputs, returns a write error or nil.
     @discardableResult
     func finishSession() -> String? {
+        // A failed load accepted no edits: preserve the original file and let a repairing update be installed.
+        if persistenceBlocked { return nil }
         if !isPreview { tick() }
         return persist()
     }

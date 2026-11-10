@@ -15,6 +15,8 @@ and helps you clock out. Built with SwiftUI and AppKit, with a Bernese mountain 
 
 **macOS 13+** · **Apple Silicon & Intel** · **Local data** · **Simplified Chinese app interface**
 
+**Current channel: 0.2.3 internal beta** · **Formal release line starts at 1.0.0**
+
 ![Living Meaning dashboard with fictional demonstration data](site/assets/dashboard.png)
 
 ## Features
@@ -47,7 +49,8 @@ and **GitHub Pages** for the website and update feed.
 3. Launch the app, set your monthly salary and working hours, then save.
 4. Clock in from the dashboard or menu bar, and clock out when your day ends.
 
-Current builds are ad-hoc signed and **not Apple Developer ID signed or notarized**.
+The current `0.2.3` package is an internal beta. Builds are ad-hoc signed and
+**not Apple Developer ID signed or notarized**.
 If macOS blocks the first launch, verify the download source, attempt to open the app,
 then check **System Settings → Privacy & Security → Open Anyway**.
 The application does not require disabling Gatekeeper.
@@ -55,6 +58,11 @@ The application does not require disabling Gatekeeper.
 Official builds include the update feed. Use the app's **更新** (Updates) page to check for a newer version.
 Automatic checks are off by default, and installation requires confirmation.
 Older preview builds can be upgraded manually once; subsequent updates preserve local settings and records.
+The website and update feed follow the published release matching the source version, including `0.x` betas.
+GitHub labels beta releases as prereleases; use the website download rather than GitHub's stable-only latest link.
+If an older app reports unreadable data and blocks updates, back up
+`~/Library/Application Support/LivingMeaning/`, force-quit the old app, and replace it with this version.
+Keep `state.json`; changing working hours in the blocked app cannot save or unlock the updater.
 
 ## How the numbers work
 
@@ -163,10 +171,11 @@ It has no dependency on a parent workspace.
 The official update feed is `https://austinzzzhang.github.io/meaning4living/appcast.xml`.
 
 GitHub Actions does not hold the Sparkle private key. Published versions are not overwritten.
-Both the display version and the internal build number must increase for a new release.
+The internal build number must always increase. Display versions now follow `0.x.y` during beta,
+then `1.0.0` for the first formal release. The one-time transition from old `1.2.x` names keeps builds increasing.
 
 See [initial GitHub setup](GITHUB-SETUP.md) and [update and release procedures](UPDATES.md)
-for maintainer instructions, currently in Chinese.
+for maintainer instructions and the beta versioning rules.
 
 ## Project layout
 
@@ -217,5 +226,5 @@ this project does not claim endorsement by them.
 
 [website]: https://austinzzzhang.github.io/meaning4living/
 [releases]: https://github.com/AustinZzzhang/meaning4living/releases
-[latest]: https://github.com/AustinZzzhang/meaning4living/releases/latest
+[latest]: https://austinzzzhang.github.io/meaning4living/#download
 [issues]: https://github.com/AustinZzzhang/meaning4living/issues

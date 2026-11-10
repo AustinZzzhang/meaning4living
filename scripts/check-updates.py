@@ -19,13 +19,13 @@ def run(arguments, **options):
     return subprocess.run([str(value) for value in arguments], check=True, **options)
 
 
-def modify_bundle(app, identifier, version):
-    """Set disposable app's identifier/version and sign it; returns nothing."""
+def modify_bundle(app, identifier, version, display_version):
+    """Set app's disposable identifier, build version and display_version, then sign it; returns nothing."""
     path = app / "Contents/Info.plist"
     info = plistlib.loads(path.read_bytes())
     info["CFBundleIdentifier"] = identifier
     info["CFBundleVersion"] = str(version)
-    info["CFBundleShortVersionString"] = f"99.{version}.0"
+    info["CFBundleShortVersionString"] = display_version
     info["SUEnableAutomaticChecks"] = False
     info["SURequireSignedFeed"] = True
     info["SUSignedFeedFailureExpirationInterval"] = 0
@@ -42,11 +42,17 @@ def check_case(root, sandbox, harness, mode):
     target = case / "target/活着的意义.app"
     target.parent.mkdir()
     source = root / "dist/活着的意义.app"
+    source_info = plistlib.loads((source / "Contents/Info.plist").read_bytes())
+    previous_build = 7
+    next_build = int(source_info["CFBundleVersion"])
+    next_version = source_info["CFBundleShortVersionString"]
+    if next_build <= previous_build:
+        raise ValueError("The current build must be newer than the published 1.2.2 build 7.")
     run(["ditto", source, target])
     target_executable = target / "Contents/MacOS/LivingMeaning"
     shutil.copy2(harness, target_executable)
     identifier = "local.livingmeaning.update-fixture." + uuid.uuid4().hex
-    modify_bundle(target, identifier, 9000)
+    modify_bundle(target, identifier, previous_build, "1.2.2")
     server_root = case / "server"
     server_root.mkdir()
     handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(server_root))
@@ -59,8 +65,8 @@ def check_case(root, sandbox, harness, mode):
         next_app = case / "next/活着的意义.app"
         next_app.parent.mkdir()
         run(["ditto", target, next_app])
-        modify_bundle(next_app, identifier, 9001)
-        archive = server_root / "fixture-9001.zip"
+        modify_bundle(next_app, identifier, next_build, next_version)
+        archive = server_root / f"fixture-{next_build}.zip"
         run(["ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", next_app, archive])
         run([
             tools / "generate_appcast", "--account", "local.livingmeaning.updates",
@@ -90,16 +96,22 @@ def check_case(root, sandbox, harness, mode):
         while mode == "install" and time.monotonic() < deadline:
             try:
                 installed = plistlib.loads((target / "Contents/Info.plist").read_bytes())
-                if installed["CFBundleVersion"] == "9001":
+                if installed["CFBundleVersion"] == str(next_build):
                     break
             except FileNotFoundError:
                 pass
             time.sleep(0.2)
         info = plistlib.loads((target / "Contents/Info.plist").read_bytes())
         version = info["CFBundleVersion"]
-        assert version == ("9001" if mode == "install" else "9000"), version
+        assert version == str(next_build if mode == "install" else previous_build), version
+        expected_display = next_version if mode == "install" else "1.2.2"
+        assert info["CFBundleShortVersionString"] == expected_display
         run(["codesign", "--verify", "--deep", "--strict", target], capture_output=True)
-        return {"passed": True, "installedBuild": version, "signatureVerified": True}
+        return {
+            "passed": True, "oldVersion": "1.2.2", "oldBuild": str(previous_build),
+            "installedVersion": info["CFBundleShortVersionString"],
+            "installedBuild": version, "signatureVerified": True,
+        }
     finally:
         server.shutdown()
         server.server_close()

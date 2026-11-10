@@ -87,6 +87,7 @@ enum PrivacyFeatureChecks {
         preview.setPresentationPrivacy(hidden: true, reason: "test")
         checks["presentationRelocksSettings"] = !preview.settingsLock.canView && preview.presentationHidden
         checks.merge(try attendancePersistenceChecks(), uniquingKeysWith: { _, new in new })
+        checks.merge(try StorageFeatureChecks.run(), uniquingKeysWith: { _, new in new })
 
         let suite = "local.livingmeaning.test-updates.\(UUID().uuidString)"
         let preferences = UserDefaults(suiteName: suite)!

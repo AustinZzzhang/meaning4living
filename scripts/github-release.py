@@ -75,9 +75,27 @@ def release_info():
     """Read source release metadata with no arguments; return a validated version/build/tag dictionary."""
     info = plistlib.loads((ROOT / "Resources/Info.plist").read_bytes())
     version, build = info["CFBundleShortVersionString"], info["CFBundleVersion"]
-    if not re.fullmatch(r"\d+(?:\.\d+){1,3}", version) or not build.isdigit():
-        raise ValueError("Release version and build must be numeric.")
+    if not re.fullmatch(r"\d+\.\d+\.\d+", version) or not build.isdigit():
+        raise ValueError("Release version must use major.minor.patch format and build must be numeric.")
     return {"version": version, "build": build, "tag": "v" + version}
+
+
+def published_release_tag(repository):
+    """Return the public tag matching source for repository, including betas, or empty if absent/draft."""
+    repository_name(repository)
+    tag = release_info()["tag"]
+    try:
+        release = json.loads(github([
+            "release", "view", tag, "--repo", repository, "--json", "tagName,isDraft,isPrerelease"
+        ]))
+    except subprocess.CalledProcessError as error:
+        message = (error.stderr or "").lower()
+        if "release not found" in message or "404" in message:
+            return ""
+        raise
+    if release.get("tagName") != tag:
+        raise ValueError("Published release does not match the source version.")
+    return "" if release["isDraft"] else tag
 
 
 def validate_manifest(manifest, repository):
@@ -86,8 +104,8 @@ def validate_manifest(manifest, repository):
     if manifest.get("repository") != repository:
         raise ValueError("Manifest repository mismatch.")
     version, build = manifest.get("version", ""), manifest.get("build", "")
-    if not re.fullmatch(r"\d+(?:\.\d+){1,3}", version) or not str(build).isdigit():
-        raise ValueError("Manifest version/build is invalid.")
+    if not re.fullmatch(r"\d+\.\d+\.\d+", version) or not str(build).isdigit():
+        raise ValueError("Manifest version must use major.minor.patch format and build must be numeric.")
     tag = "v" + version
     if manifest.get("tag") != tag or manifest.get("feed_url") != pages_url(repository) + "appcast.xml":
         raise ValueError("Manifest tag or update address is invalid.")
@@ -258,7 +276,9 @@ def publish():
             f"- macOS 13+，Apple Silicon / Intel 通用应用。\n"
             f"- 官网：{manifest['site_url']}\n"
             "- 内置固定更新源；升级保留本机设置、打卡记录和保护密码。\n"
-            "- 当前为未做 Apple 公证的试用版，安装说明见官网。\n\n"
+            "- 当前为未做 Apple 公证的内测版，安装说明见官网。\n"
+            "- 旧版若因数据读取失败无法更新，请先备份本机数据，强制退出后手动覆盖安装。\n"
+            "- 不要删除 state.json；恢复步骤见官网常见问题。\n\n"
             f"DMG SHA-256：`{manifest['dmg']['sha256']}`\n"
         )
         github(["release", "create", tag, "--repo", repository, "--target", head, "--draft",
@@ -282,7 +302,12 @@ def publish():
         if "404" not in error.stderr:
             raise
         github(["api", "--method", "POST", f"repos/{repository}/pages", "-f", "build_type=workflow"])
-    github(["release", "edit", tag, "--repo", repository, "--draft=false", "--latest"])
+    publish_arguments = ["release", "edit", tag, "--repo", repository, "--draft=false"]
+    if manifest["version"].startswith("0."):
+        publish_arguments += ["--prerelease", "--latest=false"]
+    else:
+        publish_arguments.append("--latest")
+    github(publish_arguments)
     # Explicit dispatch covers accounts where publishing a release does not trigger a workflow.
     github(["workflow", "run", "pages.yml", "--repo", repository, "--ref", "main"])
     address = f"https://github.com/{repository}/releases/tag/{tag}"
@@ -327,6 +352,8 @@ def main():
     configure = commands.add_parser("configure")
     configure.add_argument("repository")
     commands.add_parser("feed-url")
+    published = commands.add_parser("published-tag")
+    published.add_argument("--repository", required=True)
     commands.add_parser("prepare")
     commands.add_parser("publish")
     commands.add_parser("verify-online")
@@ -344,6 +371,8 @@ def main():
     elif args.action == "feed-url":
         name = configured_repository(required=False)
         print(pages_url(name) + "appcast.xml" if name else "")
+    elif args.action == "published-tag":
+        print(published_release_tag(args.repository))
     elif args.action == "prepare":
         prepare()
     elif args.action == "publish":

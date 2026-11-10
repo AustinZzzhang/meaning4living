@@ -223,6 +223,17 @@
             </p>
           </details>
           <details>
+            <summary>提示“无法读取数据”，更新也被暂停怎么办？<span>+</span></summary>
+            <p>
+              0.2.3 已修复修改作息后旧记录被误判无效的问题。已出现读取错误的旧版会禁止保存设置，
+              改回上下班时间也无法解除限制。请先备份
+              <code>~/Library/Application Support/LivingMeaning/</code> 文件夹，
+              再按 ⌥⌘Esc 强制退出旧应用，从本页下载新版并覆盖安装。
+              只替换 Applications 中的应用，不要删除 <code>state.json</code>。
+              未出现读取错误的用户可正常使用应用内更新。
+            </p>
+          </details>
+          <details>
             <summary>以后如何更新？会丢记录吗？<span>+</span></summary>
             <p>
               从本官网安装的发布版本内置更新源，在应用“更新”页检查即可。更新清单和安装包会验证发布签名，

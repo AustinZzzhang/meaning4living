@@ -68,7 +68,7 @@ function showPhase(name) {
 /** Validate trusted release metadata before enabling download links; release is config data, returns a boolean. */
 function validRelease(release) {
   if (!release || !/^[A-Za-z0-9-]+\/[A-Za-z0-9_.-]+$/.test(release.repository || "")) return false;
-  if (!/^\d+(\.\d+){1,3}$/.test(release.version || "") || release.tag !== `v${release.version}`) return false;
+  if (!/^\d+\.\d+\.\d+$/.test(release.version || "") || release.tag !== `v${release.version}`) return false;
   if (!release.dmg || !/^[a-f0-9]{64}$/.test(release.dmg.sha256 || "")) return false;
   const expected = `https://github.com/${release.repository}/releases/download/${release.tag}/`;
   return (
@@ -78,17 +78,19 @@ function validRelease(release) {
   );
 }
 
-/** Populate download/version/footer using release metadata; returns nothing and leaves missing releases disabled. */
+/** Populate downloads and beta label from release metadata; returns nothing, leaves missing releases disabled. */
 function renderRelease(release) {
   if (!validRelease(release)) return;
   const button = document.getElementById("download-button");
   button.href = release.dmg.url;
   button.removeAttribute("aria-disabled");
   button.removeAttribute("tabindex");
-  document.getElementById("download-label").textContent = "下载 Mac 版";
+  const beta = release.version.startsWith("0.");
+  document.getElementById("download-label").textContent = beta ? "下载 Mac 内测版" : "下载 Mac 版";
+  const channel = beta ? " · 内测版" : "";
   const size = (release.dmg.bytes / 1024 / 1024).toFixed(1);
   document.getElementById("release-meta").textContent =
-    `v${release.version} · macOS 13+ · Apple Silicon / Intel · ${size} MB`;
+    `v${release.version}${channel} · macOS 13+ · Apple Silicon / Intel · ${size} MB`;
   const repository = `https://github.com/${release.repository}`;
   for (const [id, url] of [
     ["source-link", repository],

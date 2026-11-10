@@ -5,6 +5,8 @@
 一个陪你准时下班的原生 macOS 小应用：每秒收入、下班倒计时、上下班打卡与每日结算。
 支持 macOS 13+，包含 Apple Silicon 和 Intel 架构。应用界面为简体中文。
 
+当前版本线：`0.2.3` 内测版；正式版从 `1.0.0` 开始。
+
 ![应用界面，演示数据](site/assets/dashboard.png)
 
 ## 功能
@@ -29,8 +31,13 @@
 打开 DMG，把应用拖入 Applications，启动后先确认月薪和作息并保存。
 旧试用版本可手动覆盖安装一次官网版本，之后从应用“更新”页直接升级。
 
-当前包未使用 Apple Developer ID 签名或公证。确认下载来源后，首次打开如被系统阻止，
+当前 `0.2.3` 包是内测版，未使用 Apple Developer ID 签名或公证。
+确认下载来源后，首次打开如被系统阻止，
 可到“系统设置 → 隐私与安全性”查看是否提供“仍要打开”。不需要关闭系统安全保护。
+官网及应用内更新源跟随当前源码对应的已发布版本，包含 `0.x` 内测版。
+GitHub 将内测版标为 prerelease，请从官网下载，避免 GitHub 的稳定版 latest 链接仍指向旧包。
+旧版若报读取失败并阻止更新，请先备份 `~/Library/Application Support/LivingMeaning/`，
+强制退出后手动覆盖安装新版，保留 `state.json`；报错后改回作息也无法保存或解除更新限制。
 
 ## 使用规则
 
@@ -104,7 +111,7 @@ python3 scripts/check-updates.py
 
 固定更新源：`https://austinzzzhang.github.io/meaning4living/appcast.xml`。
 
-详见 [GitHub 上线流程](GITHUB-SETUP.md) 和 [更新与发布](UPDATES.md)。
+详见 [GitHub 上线流程](GITHUB-SETUP.md) 和 [更新与发布](UPDATES.md)，其中包含内测版本号规则。
 
 - GitHub 仓库保存源代码，GitHub Releases 保存版本化 DMG/ZIP。
 - GitHub Pages 发布官网与固定 `appcast.xml`。
@@ -152,4 +159,4 @@ python3 scripts/check-updates.py
 Apple、macOS、Swift、GitHub 和 Sparkle 名称属于各自权利人，本项目不声称得到其背书。
 
 [website]: https://austinzzzhang.github.io/meaning4living/
-[latest]: https://github.com/AustinZzzhang/meaning4living/releases/latest
+[latest]: https://austinzzzhang.github.io/meaning4living/#download

@@ -1,14 +1,17 @@
 # 发布验证记录
 
-本文件记录 1.2.1 / build 6 首次独立发布，以及 1.2.2 / build 7 当前班次修复。
+本文件记录 1.2.1 / build 6 首次独立发布，以及 1.2.2 / build 7 的公开修复。
+本次发布目标为 0.2.3 内测版 / build 9，修复作息修改后的记录误判和退出／更新阻塞。
 实时发布状态以 GitHub Releases 和 Actions 为准，线上验收报告保存在本机发布目录。
+0.2.3 的本地复现、修复与验收见 [VERIFICATION-0.2.3.md](VERIFICATION-0.2.3.md)；
+下列公开发布验收记录属于此前的 1.2.x 版本。
 
 ## 发布位置
 
 - 源码：https://github.com/AustinZzzhang/meaning4living
 - 官网：https://austinzzzhang.github.io/meaning4living/
 - 更新源：https://austinzzzhang.github.io/meaning4living/appcast.xml
-- 下载：https://github.com/AustinZzzhang/meaning4living/releases/latest
+- 下载：https://austinzzzhang.github.io/meaning4living/#download
 
 本仓库独立于其他项目；应用名称和本机数据目录保持不变。
 
@@ -37,7 +40,7 @@ python3 scripts/github-release.py verify-online
 该命令从公开网址下载清单、DMG、ZIP，核对哈希和 Sparkle 签名，输出：
 
 ```text
-  dist/github/v1.2.1/online-verification.json
+  dist/github/v0.2.3/online-verification.json
 ```
 
 本机日志与截图保留在 `.build` 和 `dist`，不纳入 Git。

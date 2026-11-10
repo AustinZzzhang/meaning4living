@@ -577,6 +577,9 @@ kbd {
 .faq-list details {
   border-bottom: 1px solid var(--line);
 }
+.faq-list code {
+  overflow-wrap: anywhere;
+}
 summary {
   display: flex;
   list-style: none;

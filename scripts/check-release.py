@@ -67,6 +67,39 @@ class ReleaseChecks(unittest.TestCase):
         """Accept a consistent artifact layout; no inputs, returns nothing and asserts verified metadata."""
         self.assertEqual(RELEASE.validate_artifacts(self.directory, self.repository), self.manifest)
 
+    def test_pages_deploys_pinned_beta_instead_of_old_stable(self):
+        """Select a published beta matching source metadata, ignoring stable-version ordering; returns nothing."""
+        info = {"version": "0.2.3", "build": "9", "tag": "v0.2.3"}
+        response = json.dumps({"tagName": "v0.2.3", "isDraft": False, "isPrerelease": True})
+        with mock.patch.object(RELEASE, "release_info", return_value=info):
+            with mock.patch.object(RELEASE, "github", return_value=response) as command:
+                self.assertEqual(RELEASE.published_release_tag(self.repository), "v0.2.3")
+                self.assertEqual(command.call_args.args[0][2], "v0.2.3")
+
+    def test_pages_waits_for_source_release_without_falling_back(self):
+        """Keep the current site when the new source tag is absent or draft; takes no inputs, returns nothing."""
+        info = {"version": "0.2.3", "build": "9", "tag": "v0.2.3"}
+        missing = subprocess.CalledProcessError(1, "gh", stderr="release not found")
+        draft = json.dumps({"tagName": "v0.2.3", "isDraft": True})
+        with mock.patch.object(RELEASE, "release_info", return_value=info):
+            with mock.patch.object(RELEASE, "github", side_effect=missing):
+                self.assertEqual(RELEASE.published_release_tag(self.repository), "")
+            with mock.patch.object(RELEASE, "github", return_value=draft):
+                self.assertEqual(RELEASE.published_release_tag(self.repository), "")
+
+    def test_pages_auth_failure_is_not_hidden_as_no_release(self):
+        """Propagate an authentication failure instead of reporting no deployable tag; no inputs or return value."""
+        failure = subprocess.CalledProcessError(1, "gh", stderr="authentication required")
+        with mock.patch.object(RELEASE, "github", side_effect=failure):
+            with self.assertRaises(subprocess.CalledProcessError):
+                RELEASE.published_release_tag(self.repository)
+
+    def test_pages_workflow_uses_source_tag_selector(self):
+        """Ensure the actual Pages workflow uses the beta-aware selector; no inputs or return value."""
+        workflow = (RELEASE.ROOT / ".github/workflows/pages.yml").read_text()
+        self.assertIn("published-tag", workflow)
+        self.assertNotIn("--exclude-pre-releases", workflow)
+
     def test_repository_names_reject_paths_and_urls(self):
         """Reject unsafe owner/repository inputs; no inputs or return, asserts all invalid names fail."""
         for name in ["https://github.com/a/b", "../project", "a/b/c", "a/../../b", "a/../", None, "a b/c"]:

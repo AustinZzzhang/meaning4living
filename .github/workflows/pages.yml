@@ -10,6 +10,7 @@ on:
       - site/**
       - .github/workflows/pages.yml
       - scripts/github-release.py
+      - Resources/Info.plist
 
 permissions:
   contents: read
@@ -29,7 +30,7 @@ jobs:
     steps:
       - name: Check out website source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Read latest stable release
+      - name: Select published release matching source version
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -37,14 +38,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Skip the initial source push until an official stable release exists.
-          available="$(gh release list --exclude-drafts --exclude-pre-releases --limit 1 \
-            --json tagName --jq '.[0].tagName // ""')"
-          if [[ -z "$available" ]]; then
-            echo "No published release yet; website deployment will start after release." >> "$GITHUB_STEP_SUMMARY"
+          # Source pins the intended release, including 0.x betas; never fall back to an older stable release.
+          tag="$(python3 scripts/github-release.py published-tag --repository "$GH_REPO")"
+          if [[ -z "$tag" ]]; then
+            echo "Source release is not public yet; keep the current deployment." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          tag="$(gh release view --json tagName --jq .tagName)"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
       - name: Download published artifacts
         if: steps.release.outputs.tag != ''
